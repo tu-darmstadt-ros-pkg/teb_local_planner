@@ -127,9 +127,9 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     
     costmap_model_ = boost::make_shared<base_local_planner::CostmapModel>(*costmap_);
 
-    global_frame_ = costmap_ros_->getGlobalFrameID();
+    global_frame_ = "world"; //costmap_ros_->getGlobalFrameID(); NB
     cfg_.map_frame = global_frame_; // TODO
-    robot_base_frame_ = costmap_ros_->getBaseFrameID();
+    robot_base_frame_ = "base_link"; //costmap_ros_->getBaseFrameID();NB
 
     //Initialize a costmap to polygon converter
     if (!cfg_.obstacles.costmap_converter_plugin.empty())
@@ -159,7 +159,9 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     
     // Get footprint of the robot and minimum and maximum distance from the center of the robot to its footprint vertices.
     footprint_spec_ = costmap_ros_->getRobotFootprint();
-    costmap_2d::calculateMinAndMaxDistances(footprint_spec_, robot_inscribed_radius_, robot_circumscribed_radius);    
+    costmap_2d::calculateMinAndMaxDistances(footprint_spec_, robot_inscribed_radius_, robot_circumscribed_radius);   
+    ROS_INFO_STREAM("inscribed radius= "<< robot_inscribed_radius_); //NB
+    ROS_INFO_STREAM("circumscribed_radius ="<< robot_circumscribed_radius); //NB
     
     // init the odom helper to receive the robot's velocity from odom messages
     odom_helper_.setOdomTopic(cfg_.odom_topic);
@@ -174,9 +176,11 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
         
     // setup callback for custom obstacles
     custom_obst_sub_ = nh.subscribe("obstacles", 1, &TebLocalPlannerROS::customObstacleCB, this);
+    
+    robot_pose_sub = nh.subscribe("/robot_pose", 1, &TebLocalPlannerROS::robotPoseCB, this);  //NB
 
     // setup callback for custom via-points
-    via_points_sub_ = nh.subscribe("via_points", 1, &TebLocalPlannerROS::customViaPointsCB, this);
+   // via_points_sub_ = nh.subscribe("via_points", 1, &TebLocalPlannerROS::customViaPointsCB, this); NB was taken out because of the followPathAction
     
     // initialize failure detector
     ros::NodeHandle nh_move_base("~");
@@ -205,10 +209,17 @@ bool TebLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
     ROS_ERROR("teb_local_planner has not been initialized, please call initialize() before using this planner");
     return false;
   }
+  
 
   // store the global plan
   global_plan_.clear();
   global_plan_ = orig_global_plan;
+  
+  std::string id = global_plan_[0].header.frame_id; //NB
+  std::string id1 = global_plan_[1].header.frame_id; //NB
+  ROS_INFO_STREAM("SETPLAN GLOBAL PLAN[0] frame_id = "<< id); //NB
+  ROS_INFO_STREAM("SETPLAN GLOBAL PLAN[1] frame_id = "<< id1);
+
 
   // we do not clear the local planner here, since setPlan is called frequently whenever the global planner updates the plan.
   // the local planner checks whether it is required to reinitialize the trajectory or not within each velocity computation step.  
@@ -242,6 +253,7 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
     message = "teb_local_planner has not been initialized";
     return mbf_msgs::ExePathResult::NOT_INITIALIZED;
   }
+  ROS_INFO_STREAM("yaw goal="<< cfg_.goal_tolerance.yaw_goal_tolerance); //NB
 
   static uint32_t seq = 0;
   cmd_vel.header.seq = seq++;
@@ -252,7 +264,11 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
   
   // Get robot pose
   geometry_msgs::PoseStamped robot_pose;
-  costmap_ros_->getRobotPose(robot_pose);
+  //costmap_ros->getRobotPose(robot_pose); //NB
+  robot_pose.header = robot_pose_final.header; 
+  robot_pose.header.frame_id = "world";
+  robot_pose.pose = robot_pose_final.pose;
+  ROS_INFO_STREAM("ROBOT_POSEFINALHEEADER="<< robot_pose.header.frame_id);
   robot_pose_ = PoseSE2(robot_pose.pose);
     
   // Get robot velocity
@@ -277,12 +293,14 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
     return mbf_msgs::ExePathResult::INTERNAL_ERROR;
   }
 
-  // update via-points container
+  // upwdate via-points container
   if (!custom_via_points_active_)
     updateViaPointsContainer(transformed_plan, cfg_.trajectory.global_plan_viapoint_sep);
 
   nav_msgs::Odometry base_odom;
   odom_helper_.getOdom(base_odom);
+  
+  ROS_INFO_STREAM("yaw goal="<< cfg_.goal_tolerance.yaw_goal_tolerance); //NB
 
   // check if global goal is reached
   geometry_msgs::PoseStamped global_goal;
@@ -292,8 +310,7 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
   double delta_orient = g2o::normalize_theta( tf2::getYaw(global_goal.pose.orientation) - robot_pose_.theta() );
   if(fabs(std::sqrt(dx*dx+dy*dy)) < cfg_.goal_tolerance.xy_goal_tolerance
     && fabs(delta_orient) < cfg_.goal_tolerance.yaw_goal_tolerance
-    && (!cfg_.goal_tolerance.complete_global_plan || via_points_.size() == 0)
-    && (base_local_planner::stopped(base_odom, cfg_.goal_tolerance.theta_stopped_vel, cfg_.goal_tolerance.trans_stopped_vel)
+    && (base_local_planner::stopped(base_odom, cfg_.goal_tolerance.theta_stopped_vel, cfg_.goal_tolerance.trans_stopped_vel)//&& (!cfg_.goal_tolerance.complete_global_plan || via_points_.size()== 0)
         || cfg_.goal_tolerance.free_goal_vel))
   {
     goal_reached_ = true;
@@ -468,6 +485,13 @@ bool TebLocalPlannerROS::isGoalReached()
   }
   return false;
 }
+
+void TebLocalPlannerROS::robotPoseCB(const geometry_msgs::PoseStamped::ConstPtr& pose_msg) //NB
+{
+    robot_pose_final.header = pose_msg->header;
+    robot_pose_final.pose = pose_msg->pose;
+}
+
 
 
 
@@ -700,7 +724,14 @@ bool TebLocalPlannerROS::transformGlobalPlan(const tf2_ros::Buffer& tf, const st
 {
   // this method is a slightly modified version of base_local_planner/goal_functions.h
 
-  const geometry_msgs::PoseStamped& plan_pose = global_plan[0];
+   if(global_plan.size()==0){
+        ROS_INFO("FEHLER SIZE NULL");
+    }
+    const geometry_msgs::PoseStamped& plan_pose = global_plan[0];
+    std::string id = plan_pose.header.frame_id; //NB
+    ROS_INFO_STREAM("plan_pose.header.frame_id="<<plan_pose.header.frame_id); //NB
+    ROS_INFO_STREAM("plan_pose.header.stamp="<<plan_pose.header.stamp); //NB
+
 
   transformed_plan.clear();
 
@@ -1009,10 +1040,11 @@ void TebLocalPlannerROS::configureBackupModes(std::vector<geometry_msgs::PoseSta
 void TebLocalPlannerROS::customObstacleCB(const costmap_converter::ObstacleArrayMsg::ConstPtr& obst_msg)
 {
   boost::mutex::scoped_lock l(custom_obst_mutex_);
-  custom_obstacle_msg_ = *obst_msg;  
+  custom_obstacle_msg_ = *obst_msg; 
+  custom_obstacle_msg_.header.frame_id ="world"; //header is not filled by the topic NB 
 }
 
-void TebLocalPlannerROS::customViaPointsCB(const nav_msgs::Path::ConstPtr& via_points_msg)
+void TebLocalPlannerROS::customViaPointsCB( nav_msgs::Path& via_points_msg) //NB constPtr was taken out
 {
   ROS_INFO_ONCE("Via-points received. This message is printed once.");
   if (cfg_.trajectory.global_plan_viapoint_sep > 0)
@@ -1025,7 +1057,7 @@ void TebLocalPlannerROS::customViaPointsCB(const nav_msgs::Path::ConstPtr& via_p
 
   boost::mutex::scoped_lock l(via_point_mutex_);
   via_points_.clear();
-  for (const geometry_msgs::PoseStamped& pose : via_points_msg->poses)
+  for (const geometry_msgs::PoseStamped& pose : via_points_msg.poses)
   {
     via_points_.emplace_back(pose.pose.position.x, pose.pose.position.y);
   }

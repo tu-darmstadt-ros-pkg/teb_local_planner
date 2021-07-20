@@ -220,6 +220,14 @@ public:
    */
   static double getNumberFromXMLRPC(XmlRpc::XmlRpcValue& value, const std::string& full_param_name);
   
+   /**
+     * @brief Callback for custom via-points
+     * @param via_points_msg pointer to the message containing a list of via-points
+     */
+    void customViaPointsCB(nav_msgs::Path& via_points_msg); //NB vom protected to public, constPtr was taken out
+
+
+  
   //@}
   
 protected:
@@ -275,11 +283,7 @@ protected:
     */
   void customObstacleCB(const costmap_converter::ObstacleArrayMsg::ConstPtr& obst_msg);
   
-   /**
-    * @brief Callback for custom via-points
-    * @param via_points_msg pointer to the message containing a list of via-points
-    */
-  void customViaPointsCB(const nav_msgs::Path::ConstPtr& via_points_msg);
+   void robotPoseCB(const geometry_msgs::PoseStamped::ConstPtr& pose_msg); //NB
 
    /**
     * @brief Prune global plan such that already passed poses are cut off
@@ -418,6 +422,10 @@ private:
   ros::Subscriber custom_obst_sub_; //!< Subscriber for custom obstacles received via a ObstacleMsg.
   boost::mutex custom_obst_mutex_; //!< Mutex that locks the obstacle array (multi-threaded)
   costmap_converter::ObstacleArrayMsg custom_obstacle_msg_; //!< Copy of the most recent obstacle message
+  
+  ros::Subscriber robot_pose_sub;//NB
+  geometry_msgs::PoseStamped robot_pose_final; //NB
+
 
   ros::Subscriber via_points_sub_; //!< Subscriber for custom via-points received via a Path msg.
   bool custom_via_points_active_; //!< Keep track whether valid via-points have been received from via_points_sub_

@@ -1,0 +1,5 @@
+ footprint_model: # types: "point", "circular", "line", "two_circles", "polygon"
+   type: "polygon"
+   vertices: [[0.355, 0.26], [0.355, -0.26], [-0.355, 0.26], [-0.355, -0.26]]
+   
+   
