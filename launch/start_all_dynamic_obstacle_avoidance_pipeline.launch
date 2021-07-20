@@ -1,0 +1,22 @@
+<launch>
+          <remap from="/teb_local_planner/obstacles" to="/costmap_converter/costmap_obstacles" />
+	  <remap from="/teb_local_planner/planner/obstacles" to="/costmap_converter/costmap_obstacles" />
+	 
+	 <include file="$(find hector_tracked_vehicles_launch)/launch/jasmine_2018_traversibility_estimation_rgbd.launch"/>
+	 <include file="$(find dynamic_obstacle_avoidance)/launch/mapping/traversability_mapping.launch"/>
+	 <include file="$(find costmap_converter)/launch/costmap_converter.launch"/>
+	
+
+	
+  	<!--- Run optimization test node -->
+     <node pkg="teb_local_planner" type="test_optim_node" name="teb_local_planner" output="screen"  >
+        <rosparam file="$(find teb_local_planner)/config/local_map.yaml" command="load" ns="" />
+        <rosparam file="$(find teb_local_planner)/config/local_planner_params.yaml" command="load" />
+        <rosparam command="load" file="$(find mpc_local_planner)/config/costmap_conversion_params.yaml" /> 
+     </node>
+
+  	<!-- RVIZ -->
+  	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find teb_local_planner)/cfg/rviz_test_optim.rviz" />
+  	
+  	
+</launch>
