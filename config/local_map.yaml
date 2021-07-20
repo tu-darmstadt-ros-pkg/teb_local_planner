@@ -1,0 +1,6 @@
+plugins: 
+    - {name: static_layer,       type: "costmap_2d::StaticLayer"}
+publish_frequency: 20.0
+static_map:
+   map_topic: /traversability_occ_map
+footprint: [[0.355, 0.26], [0.355, -0.26], [-0.355, 0.26], [-0.355, -0.26]]

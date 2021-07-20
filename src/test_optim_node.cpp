@@ -43,14 +43,33 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <actionlib/server/simple_action_server.h> 
+#include <move_base_lite_msgs/FollowPathAction.h> 
+#include <tf/transform_listener.h>
+#include <costmap_2d/costmap_2d_ros.h>
+
+
+#include <memory>
+
+
 
 
 using namespace teb_local_planner; // it is ok here to import everything for testing purposes
+ ros::Publisher pub1;
+class TestTebOptimNode
+{
+  public: 
+    TestTebOptimNode() = default;
+    tf2_ros::Buffer tfBuffer; //NB
+    std::shared_ptr<actionlib::SimpleActionServer<move_base_lite_msgs::FollowPathAction>> as_; //NB
+    void start(ros::NodeHandle& nh);
+    
 
 // ============= Global Variables ================
 // Ok global variables are bad, but here we only have a simple testing node.
-PlannerInterfacePtr planner;
-TebVisualizationPtr visual;
+protected:
+//PlannerInterfacePtr planner;
+/*TebVisualizationPtr visual;
 std::vector<ObstaclePtr> obst_vector;
 ViaPointContainer via_points;
 TebConfig config;
@@ -70,15 +89,75 @@ void CreateInteractiveMarker(const double& init_x, const double& init_y, unsigne
 void CB_obstacle_marker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
 void CB_clicked_points(const geometry_msgs::PointStampedConstPtr& point_msg);
 void CB_via_points(const nav_msgs::Path::ConstPtr& via_points_msg);
-void CB_setObstacleVelocity(const geometry_msgs::TwistConstPtr& twist_msg, const unsigned int id);
-
-
-// =============== Main function =================
-int main( int argc, char** argv )
-{
-  ros::init(argc, argv, "test_optim_node");
-  ros::NodeHandle n("~");
+void CB_setObstacleVelocity(const geometry_msgs::TwistConstPtr& twist_msg, const unsigned int id);*/
+ void followPathGoalCallback(); //NB1
+ void followPathPreemptCallback();
+ actionlib::SimpleActionServer<move_base_lite_msgs::FollowPathAction>::GoalConstPtr follow_path_goal_;
+ move_base_lite_msgs::FollowPathResult result; //NB
+ teb_local_planner::TebLocalPlannerROS planner; //NB
+ costmap_2d::Costmap2DROS* costmap;
+ bool planSet = false; 
+ };
  
+ void TestTebOptimNode::start(ros::NodeHandle& nh)
+ {
+ 
+    std::string map_frame = "world";
+    
+     
+    tf2_ros::TransformListener tfListener(tfBuffer); //
+    std::string name ="static_map"; //NB
+    costmap_2d::Costmap2DROS costmap(name, tfBuffer); //NB   
+    ROS_INFO("Hallo");
+    //ros::Subscriber occ_map = nh.subscribe("traversability_occ_map",1, &TestMpcOptimNode::costmap_update, this);
+    
+    std::string name1 ="";
+    planner.initialize(name1, &tfBuffer, &costmap); //NB 
+    
+    ROS_INFO("JA"); 
+    
+    as_.reset(new actionlib::SimpleActionServer<move_base_lite_msgs::FollowPathAction>(nh, "/controller/follow_path", 0, false));
+    as_->registerGoalCallback(boost::bind(&TestTebOptimNode::followPathGoalCallback, this));
+    as_->registerPreemptCallback(boost::bind(&TestTebOptimNode::followPathPreemptCallback, this));
+    as_->start();
+    
+    geometry_msgs::Twist vel1; //NB
+    ros::Rate rate(20);
+    while (ros::ok())
+    {
+
+    
+     if(planSet)
+        {
+
+            if (true == planner.computeVelocityCommands(vel1))  // NB
+            {
+                ROS_INFO_STREAM("CMDVEL="<<vel1.linear.x);
+                pub1.publish(vel1);
+            }
+        }
+        
+     pub1 = nh.advertise<geometry_msgs::Twist> ("/cmd_vel_raw", 1);//NB
+        
+     if(planner.isGoalReached() && as_->isActive())
+       {
+           result.result.val = move_base_lite_msgs::ErrorCodes::SUCCESS;  
+           as_->setSucceeded(result,"reached goal");
+       }
+       
+       
+        ros::spinOnce();
+        rate.sleep();
+    }
+
+
+
+
+
+
+
+
+ /*
   
   // load ros parameters from node handle
   config.loadRosParamFromNodeHandle(n);
@@ -127,7 +206,7 @@ int main( int argc, char** argv )
   obst_vector.emplace_back(polyobst);
   */
   
-  for (unsigned int i=0; i<obst_vector.size(); ++i)
+ /* for (unsigned int i=0; i<obst_vector.size(); ++i)
   {
     // setup callbacks for setting obstacle velocities
     std::string topic = "/test_optim_node/obstacle_" + std::to_string(i) + "/cmd_vel";
@@ -156,13 +235,114 @@ int main( int argc, char** argv )
     planner = PlannerInterfacePtr(new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points));
   
 
-  no_fixed_obstacles = obst_vector.size();
-  ros::spin();
+  no_fixed_obstacles = obst_vector.size();*/
+  
+  
+  
+
+}
+
+
+
+
+
+// =============== Main function =================
+int main( int argc, char** argv )
+{
+  ros::init(argc, argv, "test_optim_node");
+  ros::NodeHandle nh("~");
+  TestTebOptimNode teb_test;
+  teb_test.start(nh);
+
 
   return 0;
 }
 
-// Planning loop
+
+void costmap_update(const nav_msgs::OccupancyGridConstPtr& new_map) 
+{
+   // costmap->incomingMap(new_map);
+}
+	
+void TestTebOptimNode::followPathGoalCallback()
+{
+    follow_path_goal_ = as_->acceptNewGoal();
+    //std::vector<geometry_msgs::PoseStamped> path = follow_path_goal_->target_path.poses;
+    std_msgs::Header header = follow_path_goal_->target_path.header;
+    std::string id2= follow_path_goal_->target_path.header.frame_id;
+    ROS_INFO_STREAM("TOPLEVELHEADER="<< id2);
+    ROS_INFO_STREAM("TOPLEVELSTAMP"<< follow_path_goal_->target_path.header.stamp);
+    
+    std::string id = follow_path_goal_->target_path.poses.at(0).header.frame_id;
+    ROS_INFO_STREAM("ERSTER EINTRAG= "<< id);
+    ROS_INFO_STREAM("ERSTER STAMP=" <<follow_path_goal_->target_path.poses.at(0).header.stamp);
+
+    if( follow_path_goal_->target_path.poses.size() ==0)
+    {
+        result.result.val = move_base_lite_msgs::ErrorCodes::SUCCESS;
+        as_->setSucceeded(result,"empty path");
+        return;
+    }
+
+    std::vector<geometry_msgs::PoseStamped> final_path;
+    final_path.push_back(follow_path_goal_->target_path.poses.at(0));
+    final_path.at(0).header = header;
+    ROS_INFO_STREAM("path.header.frame_id="<<final_path.at(0).header.frame_id); //NB
+    ROS_INFO_STREAM("path.header.stamp="<<final_path.at(0).header.stamp); //NB
+
+    for(unsigned int i=1; i< (follow_path_goal_->target_path.poses.size()-1); i++) //den ersten Speichern wir auf jeden fall ab deswegen i =1 , den letzten speichern wir auch auf jeden fall deswege  size()-1
+    {
+        geometry_msgs::PoseStamped p;
+        p.pose = follow_path_goal_->target_path.poses.at(i).pose;
+        p.header = header;
+        float x = p.pose.position.x;
+        float y = p.pose.position.y;
+        if((x>= (2.5 + final_path.back().pose.position.x)) || (y>= (2.5 + final_path.back().pose.position.y)))  //wir wollen alle 2.5 meter einen neuen Punkt abspeichern
+        {
+            final_path.push_back(p);
+
+        }
+
+    }
+    final_path.push_back(follow_path_goal_->target_path.poses.back()); // letzten Eintrag noch abspeichern
+    final_path.back().header = header;
+    //nav_msgs::Path::ConstPtr& path2use = &(follow_path_goal_->target_path);
+    nav_msgs::Path path2use = follow_path_goal_->target_path;
+    path2use.poses.clear();
+    for (size_t i = 0; i < final_path.size(); ++i) {
+        path2use.poses.push_back(final_path[i]);
+    }
+
+    ROS_INFO("FollowPath");
+    planner.setPlan(final_path);
+    planner.customViaPointsCB(path2use);
+    //CB_via_points(path2use);
+    planSet = true;
+
+
+    
+    
+
+}  //NB1
+
+void TestTebOptimNode::followPathPreemptCallback()
+{   
+    geometry_msgs::Twist msg;
+    msg.linear.x=0;
+    msg.linear.y=0;
+    msg.linear.z=0;
+    msg.angular.x=0;
+    msg.angular.y=0;
+    msg.angular.z=0;
+    pub1.publish(msg);
+     ROS_INFO(" Preempted MPC Local Planner");
+    as_->setPreempted();
+
+}  //NB1
+
+
+
+/*// Planning loop
 void CB_mainCycle(const ros::TimerEvent& e)
 {
   planner->plan(PoseSE2(-4,0,0), PoseSE2(4,0,0)); // hardcoded start and goal for testing purposes
@@ -269,6 +449,11 @@ void CB_customObstacle(const costmap_converter::ObstacleArrayMsg::ConstPtr& obst
                                                             obst_msg->obstacles.at(i).radius )));
       }
     }
+    else if (obst_msg->obstacles.at(i).polygon.points.empty())
+    {
+      ROS_WARN("Invalid custom obstacle received. List of polygon vertices is empty. Skipping...");
+      continue;
+    }
     else
     {
       PolygonObstacle* polyobst = new PolygonObstacle;
@@ -317,4 +502,4 @@ void CB_setObstacleVelocity(const geometry_msgs::TwistConstPtr& twist_msg, const
 
   Eigen::Vector2d vel (twist_msg->linear.x, twist_msg->linear.y);
   obst_vector.at(id)->setCentroidVelocity(vel);
-}
+}*/
