@@ -179,6 +179,7 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     
     robot_pose_sub = nh.subscribe("/robot_pose", 1, &TebLocalPlannerROS::robotPoseCB, this);  //NB
 
+   
     // setup callback for custom via-points
    // via_points_sub_ = nh.subscribe("via_points", 1, &TebLocalPlannerROS::customViaPointsCB, this); NB was taken out because of the followPathAction
     
@@ -227,7 +228,9 @@ bool TebLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
   // reset goal_reached_ flag
   goal_reached_ = false;
   
+  
   return true;
+  
 }
 
 

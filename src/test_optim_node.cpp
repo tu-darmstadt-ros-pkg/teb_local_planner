@@ -314,7 +314,9 @@ void TestTebOptimNode::followPathGoalCallback()
     }
 
     ROS_INFO("FollowPath");
+   // if(!planSet) {
     planner.setPlan(final_path);
+    //}
     planner.customViaPointsCB(path2use);
     //CB_via_points(path2use);
     planSet = true;
