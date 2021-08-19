@@ -5,6 +5,7 @@
 	 <include file="$(find hector_tracked_vehicles_launch)/launch/jasmine_2018_traversibility_estimation_rgbd.launch"/>
 	 <include file="$(find dynamic_obstacle_avoidance)/launch/mapping/traversability_mapping.launch"/>
 	 <include file="$(find costmap_converter)/launch/costmap_converter.launch"/>
+	 <include file="$(find fast_dynamic_obstacle_avoidance)/launch/obstacle_recognition.launch"/>
 	
 
 	
@@ -12,7 +13,7 @@
      <node pkg="teb_local_planner" type="test_optim_node" name="teb_local_planner" output="screen"  >
         <rosparam file="$(find teb_local_planner)/config/local_map.yaml" command="load" ns="" />
         <rosparam file="$(find teb_local_planner)/config/local_planner_params.yaml" command="load" />
-        <rosparam command="load" file="$(find mpc_local_planner)/config/costmap_conversion_params.yaml" /> 
+        <rosparam command="load" file="$(find teb_local_planner)/config/costmap_conversion_params.yaml" /> 
      </node>
 
   	<!-- RVIZ -->

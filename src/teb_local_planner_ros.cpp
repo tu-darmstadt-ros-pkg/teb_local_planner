@@ -160,8 +160,8 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     // Get footprint of the robot and minimum and maximum distance from the center of the robot to its footprint vertices.
     footprint_spec_ = costmap_ros_->getRobotFootprint();
     costmap_2d::calculateMinAndMaxDistances(footprint_spec_, robot_inscribed_radius_, robot_circumscribed_radius);   
-    ROS_INFO_STREAM("inscribed radius= "<< robot_inscribed_radius_); //NB
-    ROS_INFO_STREAM("circumscribed_radius ="<< robot_circumscribed_radius); //NB
+    //ROS_INFO_STREAM("inscribed radius= "<< robot_inscribed_radius_); //NB
+    //ROS_INFO_STREAM("circumscribed_radius ="<< robot_circumscribed_radius); //NB
     
     // init the odom helper to receive the robot's velocity from odom messages
     odom_helper_.setOdomTopic(cfg_.odom_topic);
@@ -218,8 +218,8 @@ bool TebLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
   
   std::string id = global_plan_[0].header.frame_id; //NB
   std::string id1 = global_plan_[1].header.frame_id; //NB
-  ROS_INFO_STREAM("SETPLAN GLOBAL PLAN[0] frame_id = "<< id); //NB
-  ROS_INFO_STREAM("SETPLAN GLOBAL PLAN[1] frame_id = "<< id1);
+ // ROS_INFO_STREAM("SETPLAN GLOBAL PLAN[0] frame_id = "<< id); //NB
+  //ROS_INFO_STREAM("SETPLAN GLOBAL PLAN[1] frame_id = "<< id1);
 
 
   // we do not clear the local planner here, since setPlan is called frequently whenever the global planner updates the plan.
@@ -256,7 +256,7 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
     message = "teb_local_planner has not been initialized";
     return mbf_msgs::ExePathResult::NOT_INITIALIZED;
   }
-  ROS_INFO_STREAM("yaw goal="<< cfg_.goal_tolerance.yaw_goal_tolerance); //NB
+ // ROS_INFO_STREAM("yaw goal="<< cfg_.goal_tolerance.yaw_goal_tolerance); //NB
 
   static uint32_t seq = 0;
   cmd_vel.header.seq = seq++;
@@ -271,7 +271,7 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
   robot_pose.header = robot_pose_final.header; 
   robot_pose.header.frame_id = "world";
   robot_pose.pose = robot_pose_final.pose;
-  ROS_INFO_STREAM("ROBOT_POSEFINALHEEADER="<< robot_pose.header.frame_id);
+  //ROS_INFO_STREAM("ROBOT_POSEFINALHEEADER="<< robot_pose.header.frame_id);
   robot_pose_ = PoseSE2(robot_pose.pose);
     
   // Get robot velocity
@@ -303,7 +303,7 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
   nav_msgs::Odometry base_odom;
   odom_helper_.getOdom(base_odom);
   
-  ROS_INFO_STREAM("yaw goal="<< cfg_.goal_tolerance.yaw_goal_tolerance); //NB
+  //ROS_INFO_STREAM("yaw goal="<< cfg_.goal_tolerance.yaw_goal_tolerance); //NB
 
   // check if global goal is reached
   geometry_msgs::PoseStamped global_goal;
@@ -732,8 +732,8 @@ bool TebLocalPlannerROS::transformGlobalPlan(const tf2_ros::Buffer& tf, const st
     }
     const geometry_msgs::PoseStamped& plan_pose = global_plan[0];
     std::string id = plan_pose.header.frame_id; //NB
-    ROS_INFO_STREAM("plan_pose.header.frame_id="<<plan_pose.header.frame_id); //NB
-    ROS_INFO_STREAM("plan_pose.header.stamp="<<plan_pose.header.stamp); //NB
+    //ROS_INFO_STREAM("plan_pose.header.frame_id="<<plan_pose.header.frame_id); //NB
+    //ROS_INFO_STREAM("plan_pose.header.stamp="<<plan_pose.header.stamp); //NB
 
 
   transformed_plan.clear();

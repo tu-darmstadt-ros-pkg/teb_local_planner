@@ -108,13 +108,13 @@ void CB_setObstacleVelocity(const geometry_msgs::TwistConstPtr& twist_msg, const
     tf2_ros::TransformListener tfListener(tfBuffer); //
     std::string name ="static_map"; //NB
     costmap_2d::Costmap2DROS costmap(name, tfBuffer); //NB   
-    ROS_INFO("Hallo");
+    //ROS_INFO("Hallo");
     //ros::Subscriber occ_map = nh.subscribe("traversability_occ_map",1, &TestMpcOptimNode::costmap_update, this);
     
     std::string name1 ="";
     planner.initialize(name1, &tfBuffer, &costmap); //NB 
     
-    ROS_INFO("JA"); 
+    //ROS_INFO("JA"); 
     
     as_.reset(new actionlib::SimpleActionServer<move_base_lite_msgs::FollowPathAction>(nh, "/controller/follow_path", 0, false));
     as_->registerGoalCallback(boost::bind(&TestTebOptimNode::followPathGoalCallback, this));
@@ -132,7 +132,7 @@ void CB_setObstacleVelocity(const geometry_msgs::TwistConstPtr& twist_msg, const
 
             if (true == planner.computeVelocityCommands(vel1))  // NB
             {
-                ROS_INFO_STREAM("CMDVEL="<<vel1.linear.x);
+                //ROS_INFO_STREAM("CMDVEL="<<vel1.linear.x);
                 pub1.publish(vel1);
             }
         }
@@ -270,12 +270,12 @@ void TestTebOptimNode::followPathGoalCallback()
     //std::vector<geometry_msgs::PoseStamped> path = follow_path_goal_->target_path.poses;
     std_msgs::Header header = follow_path_goal_->target_path.header;
     std::string id2= follow_path_goal_->target_path.header.frame_id;
-    ROS_INFO_STREAM("TOPLEVELHEADER="<< id2);
-    ROS_INFO_STREAM("TOPLEVELSTAMP"<< follow_path_goal_->target_path.header.stamp);
+    //ROS_INFO_STREAM("TOPLEVELHEADER="<< id2);
+    //ROS_INFO_STREAM("TOPLEVELSTAMP"<< follow_path_goal_->target_path.header.stamp);
     
     std::string id = follow_path_goal_->target_path.poses.at(0).header.frame_id;
-    ROS_INFO_STREAM("ERSTER EINTRAG= "<< id);
-    ROS_INFO_STREAM("ERSTER STAMP=" <<follow_path_goal_->target_path.poses.at(0).header.stamp);
+    //ROS_INFO_STREAM("ERSTER EINTRAG= "<< id);
+    //ROS_INFO_STREAM("ERSTER STAMP=" <<follow_path_goal_->target_path.poses.at(0).header.stamp);
 
     if( follow_path_goal_->target_path.poses.size() ==0)
     {
@@ -287,8 +287,8 @@ void TestTebOptimNode::followPathGoalCallback()
     std::vector<geometry_msgs::PoseStamped> final_path;
     final_path.push_back(follow_path_goal_->target_path.poses.at(0));
     final_path.at(0).header = header;
-    ROS_INFO_STREAM("path.header.frame_id="<<final_path.at(0).header.frame_id); //NB
-    ROS_INFO_STREAM("path.header.stamp="<<final_path.at(0).header.stamp); //NB
+    //ROS_INFO_STREAM("path.header.frame_id="<<final_path.at(0).header.frame_id); //NB
+    //ROS_INFO_STREAM("path.header.stamp="<<final_path.at(0).header.stamp); //NB
 
     for(unsigned int i=1; i< (follow_path_goal_->target_path.poses.size()-1); i++) //den ersten Speichern wir auf jeden fall ab deswegen i =1 , den letzten speichern wir auch auf jeden fall deswege  size()-1
     {
@@ -313,7 +313,7 @@ void TestTebOptimNode::followPathGoalCallback()
         path2use.poses.push_back(final_path[i]);
     }
 
-    ROS_INFO("FollowPath");
+    //ROS_INFO("FollowPath");
    // if(!planSet) {
     planner.setPlan(final_path);
     //}

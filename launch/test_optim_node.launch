@@ -7,7 +7,7 @@
      <node pkg="teb_local_planner" type="test_optim_node" name="test_optim_node" output="screen"  >
         <rosparam file="$(find teb_local_planner)/config/local_map.yaml" command="load" ns="" />
         <rosparam file="$(find teb_local_planner)/config/local_planner_params.yaml" command="load" />
-        <rosparam command="load" file="$(find mpc_local_planner)/config/costmap_conversion_params.yaml" /> 
+        <rosparam command="load" file="$(find teb_local_planner)/config/costmap_conversion_params.yaml" /> 
      </node>
 
   	<!-- RVIZ -->
