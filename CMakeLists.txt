@@ -56,6 +56,7 @@ set(EXTERNAL_LIBS ${SUITESPARSE_LIBRARIES} ${G2O_LIBRARIES})
 # catkin_python_setup()
 
 
+
 ## C++11 support
 ## Unfortunately, the 3d-party dependency libg2o requires c++11 starting from ROS Jade.
 ## Even if the ROS Jade specifications do not want c++11-only packages,
