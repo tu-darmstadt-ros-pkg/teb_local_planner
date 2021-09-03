@@ -9,8 +9,8 @@
 	
 
 	
-  	<!--- Run optimization test node -->
-     <node pkg="teb_local_planner" type="test_optim_node" name="teb_local_planner" output="screen"  >
+  	<!--- Run optimization node -->
+     <node pkg="teb_local_planner" type="teb_optim_node" name="teb_local_planner" output="screen"  >
         <rosparam file="$(find teb_local_planner)/config/local_map.yaml" command="load" ns="" />
         <rosparam file="$(find teb_local_planner)/config/local_planner_params.yaml" command="load" />
         <rosparam command="load" file="$(find teb_local_planner)/config/costmap_conversion_params.yaml" /> 
